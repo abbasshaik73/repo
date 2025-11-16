@@ -12,4 +12,6 @@ systemctl status jenkins
 
 
 systemctl stop jenkins
+systemctl start jenkins
+systemctl status jenkins
 
