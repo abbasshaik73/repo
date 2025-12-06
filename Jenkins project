@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+    tools {
+        maven 'mymaven'
+    }
+    stages {
+        stage ('code') {
+            steps {
+                git 'https://github.com/abbasshaik73/one.git'
+            }
+        }
+        stage ('cqa') {
+            steps {
+                withSonarQubeEnv('mysonar') {
+                    sh """
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=myproject \
+                    -Dsonar.host.url=http://18.213.220.210:9000 \
+                    -Dsonar.login=0df6aaf4586b7c23c1fe08d7f7335686df3871ce """
+}
+            }
+        }
+        stage ('build') {
+            steps {
+                sh 'mvn clean package '
+            }
+        }
+        stage ('artuifact') {
+            steps {
+                nexusArtifactUploader artifacts: [[artifactId: 'myweb', classifier: '', file: 'target/myweb-8.7.3.war', type: 'war']], credentialsId: 'nexus-id', groupId: 'in.javahome', nexusUrl: '98.92.38.196:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'repo', version: '8.7.3'
+            }
+        }
+        stage ('deploy') {
+            input {
+                message "can i deploy"
+            }
+            steps {
+                deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: 'tomcat', path: '', url: 'http://98.92.94.83:8080/')], contextPath: 'appserver', war: 'target/*.war'
+            }
+        }
+    }
+    post {
+        always {
+            mail to: 'abbasshaik0908@gmail.com',
+            subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+             body: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} \n build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URL}"
+        }
+    }
+}
